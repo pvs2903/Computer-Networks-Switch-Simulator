@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Switch Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .simulation-area {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 20px;
+            position: relative;
+            min-height: 600px;
+            border: 2px solid #e9ecef;
+        }
+
+        .switch {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 240px;
+            height: 100px;
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+            border: 4px solid #3498db;
+            z-index: 10;
+        }
+
+        .switch-label {
+            font-size: 16px;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        .switch-ports {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .port {
+            width: 12px;
+            height: 8px;
+            background: #1abc9c;
+            border-radius: 2px;
+            border: 1px solid #16a085;
+        }
+
+        .port.correct {
+            background: #27ae60;
+            box-shadow: 0 0 12px rgba(39, 174, 96, 0.8);
+        }
+
+        .port.wrong {
+            background: #e74c3c;
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.8);
+        }
+
+        .cable.correct {
+            background: linear-gradient(90deg, #27ae60, #229954, #27ae60);
+            height: 6px;
+            box-shadow: 0 0 15px rgba(39, 174, 96, 0.7);
+            animation: correctFlow 1.5s ease-in-out;
+        }
+
+        .cable.wrong {
+            background: linear-gradient(90deg, #e74c3c, #c0392b, #e74c3c);
+            height: 5px;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
+            animation: wrongFlow 1.5s ease-in-out;
+        }
+
+        @keyframes correctFlow {
+            0% { 
+                background-position: 0% 50%; 
+                box-shadow: 0 0 15px rgba(39, 174, 96, 0.7);
+            }
+            50% { 
+                background-position: 100% 50%; 
+                box-shadow: 0 0 25px rgba(39, 174, 96, 0.9);
+            }
+            100% { 
+                background-position: 200% 50%; 
+                box-shadow: 0 0 15px rgba(39, 174, 96, 0.7);
+            }
+        }
+
+        @keyframes wrongFlow {
+            0% { 
+                background-position: 0% 50%; 
+                box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
+            }
+            50% { 
+                background-position: 100% 50%; 
+                box-shadow: 0 0 25px rgba(231, 76, 60, 0.9);
+            }
+            100% { 
+                background-position: 200% 50%; 
+                box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
+            }
+        }
+
+        .device.blocked {
+            border: 3px solid #e74c3c;
+            animation: blockEffect 1s ease-in-out;
+        }
+
+        @keyframes blockEffect {
+            0%, 100% { 
+                border-color: #e74c3c;
+                box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+            }
+            50% { 
+                border-color: #c0392b;
+                box-shadow: 0 0 25px rgba(231, 76, 60, 0.8);
+            }
+        }
+
+        .blocking-message {
+            position: absolute;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 20;
+            animation: fadeInOut 2s ease-in-out;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1); }
+        }
+
+        .device {
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .device:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .device.selected {
+            border-color: #f39c12;
+            box-shadow: 0 0 25px rgba(243, 156, 18, 0.7);
+            transform: scale(1.1);
+        }
+
+        .device.receiving {
+            animation: pulse 1.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); }
+            50% { transform: scale(1.15); box-shadow: 0 0 30px rgba(46, 204, 113, 0.8); }
+        }
+
+        .computer { background: linear-gradient(45deg, #3498db, #2980b9); }
+        .printer { background: linear-gradient(45deg, #e74c3c, #c0392b); }
+        .server { background: linear-gradient(45deg, #27ae60, #229954); }
+        .laptop { background: linear-gradient(45deg, #9b59b6, #8e44ad); }
+
+        .device-label {
+            font-size: 11px;
+            margin-top: 4px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .device-icon {
+            font-size: 24px;
+            margin-bottom: 2px;
+        }
+
+        .cable {
+            position: absolute;
+            height: 4px;
+            background: linear-gradient(90deg, #34495e, #2c3e50);
+            transform-origin: left center;
+            z-index: 5;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .cable.active {
+            background: linear-gradient(90deg, #f39c12, #e67e22, #f39c12);
+            height: 6px;
+            box-shadow: 0 0 12px rgba(243, 156, 18, 0.6);
+            animation: dataFlow 1.5s ease-in-out;
+        }
+
+        .cable.flooding {
+            background: linear-gradient(90deg, #e74c3c, #c0392b, #e74c3c);
+            height: 5px;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
+            animation: floodingFlow 2s ease-in-out;
+        }
+
+        .cable.filtering {
+            background: linear-gradient(90deg, #95a5a6, #7f8c8d);
+            height: 3px;
+            box-shadow: 0 0 8px rgba(149, 165, 166, 0.5);
+            animation: filteringBlock 1s ease-in-out;
+        }
+
+        @keyframes floodingFlow {
+            0% { 
+                background-position: 0% 50%; 
+                box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
+            }
+            50% { 
+                background-position: 100% 50%; 
+                box-shadow: 0 0 25px rgba(231, 76, 60, 0.9);
+            }
+            100% { 
+                background-position: 200% 50%; 
+                box-shadow: 0 0 15px rgba(231, 76, 60, 0.7);
+            }
+        }
+
+        @keyframes filteringBlock {
+            0%, 100% { 
+                opacity: 1; 
+                box-shadow: 0 0 8px rgba(149, 165, 166, 0.5);
+            }
+            50% { 
+                opacity: 0.3; 
+                box-shadow: 0 0 15px rgba(149, 165, 166, 0.8);
+            }
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(45deg, #27ae60, #229954);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .info-panel {
+            background: #ecf0f1;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .info-panel h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .mac-table {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            border: 2px solid #bdc3c7;
+        }
+
+        .mac-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ecf0f1;
+            font-family: monospace;
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #d5f4e6;
+            color: #27ae60;
+            border: 2px solid #27ae60;
+        }
+
+        .status.info {
+            background: #d6eaf8;
+            color: #3498db;
+            border: 2px solid #3498db;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .simulation-area {
+                min-height: 400px;
+                padding: 20px;
+            }
+            
+            .switch {
+                width: 150px;
+                height: 60px;
+            }
+            
+            .device {
+                width: 60px;
+                height: 60px;
+                font-size: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Network Switch Simulator</h1>
+            <p>Learn how network switches intelligently route data between devices</p>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="resetSimulation()">🔄 Reset</button>
+            <button class="btn btn-success" onclick="demonstrateFunction('learning')">📚 Learning</button>
+            <button class="btn btn-warning" onclick="demonstrateFunction('flooding')">🌊 Flooding</button>
+            <button class="btn" style="background: linear-gradient(45deg, #27ae60, #229954); color: white;" onclick="demonstrateFunction('forwarding')">📤 Forwarding</button>
+            <button class="btn" style="background: linear-gradient(45deg, #e74c3c, #c0392b); color: white;" onclick="demonstrateFunction('filtering')">🚫 Filtering</button>
+            <button class="btn btn-warning" onclick="showMACTable()">📋 View MAC Table</button>
+        </div>
+
+        <div class="simulation-area" id="simulationArea">
+            <div class="switch">
+                <div class="switch-label">
+                    <strong>Network Switch</strong><br>
+                    <small>Layer 2 Device</small>
+                </div>
+                <div class="switch-ports">
+                    <div class="port" id="port0"></div>
+                    <div class="port" id="port1"></div>
+                    <div class="port" id="port2"></div>
+                    <div class="port" id="port3"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>📡 How It Works:</h3>
+            <div id="statusMessage" class="status info">
+                Click on any device to select it as sender, then click another device to send data!
+            </div>
+            <p><strong>Switch Functions - Click to Demonstrate:</strong></p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>📚 <strong>Learning:</strong> Switch discovers and remembers device MAC addresses and port locations</li>
+                <li>🌊 <strong>Flooding:</strong> When destination is unknown, data is sent to all ports except the sender</li>
+                <li>📤 <strong>Forwarding:</strong> Direct communication between known devices using MAC table</li>
+                <li>🚫 <strong>Filtering:</strong> Prevents unnecessary traffic by blocking data on unused ports</li>
+            </ul>
+            
+            <div class="mac-table" id="macTable" style="display: none;">
+                <h4>📋 MAC Address Table (CAM Table)</h4>
+                <div id="macEntries"></div>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color computer"></div>
+                <span>Computer</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color printer"></div>
+                <span>Printer</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color server"></div>
+                <span>Server</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color laptop"></div>
+                <span>Laptop</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let devices = [];
+        let selectedDevice = null;
+        let macTable = {};
+        let cables = [];
+
+        // Device configurations with better positioning to avoid overlaps
+        const deviceConfigs = [
+            { type: 'computer', label: 'Computer-1', mac: 'AA:BB:CC:DD:EE:01', x: 20, y: 10 },
+            { type: 'printer', label: 'Printer-1', mac: 'AA:BB:CC:DD:EE:02', x: 80, y: 10 },
+            { type: 'server', label: 'Server-1', mac: 'AA:BB:CC:DD:EE:03', x: 80, y: 80 },
+            { type: 'laptop', label: 'Laptop-1', mac: 'AA:BB:CC:DD:EE:04', x: 20, y: 80 }
+        ];
+
+        function initializeSimulation() {
+            const area = document.getElementById('simulationArea');
+            
+            // Clear existing devices and cables
+            devices.forEach(device => device.element.remove());
+            cables.forEach(cable => cable.remove());
+            devices = [];
+            cables = [];
+            macTable = {};
+            
+            // Create devices
+            deviceConfigs.forEach((config, index) => {
+                const device = createDevice(config, index);
+                devices.push(device);
+                area.appendChild(device.element);
+                
+                // Create cable to switch
+                const cable = createCable(device);
+                cables.push(cable);
+                area.appendChild(cable);
+            });
+            
+            updateMACTable();
+        }
+
+        function createDevice(config, port) {
+            const device = document.createElement('div');
+            device.className = `device ${config.type}`;
+            device.style.left = `${config.x}%`;
+            device.style.top = `${config.y}%`;
+            
+            // Set appropriate icon based on device type
+            const icons = {
+                computer: '🖥️',
+                printer: '🖨️',
+                server: '🗄️',
+                laptop: '💻'
+            };
+            
+            device.innerHTML = `
+                <div class="device-icon">${icons[config.type]}</div>
+                <div class="device-label">${config.label}</div>
+            `;
+            
+            device.addEventListener('click', () => selectDevice(device, config, port));
+            
+            return {
+                element: device,
+                config: config,
+                port: port
+            };
+        }
+
+        function createCable(device) {
+            const cable = document.createElement('div');
+            cable.className = 'cable';
+            
+            // Calculate precise cable positioning
+            const switchCenter = { x: 50, y: 50 };
+            const deviceCenter = { 
+                x: device.config.x + 5, // Account for device width
+                y: device.config.y + 5  // Account for device height
+            };
+            
+            // Calculate cable geometry
+            const deltaX = switchCenter.x - deviceCenter.x;
+            const deltaY = switchCenter.y - deviceCenter.y;
+            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+            
+            // Convert percentage to pixels for accurate positioning
+            const containerWidth = 1000; // Approximate container width
+            const containerHeight = 600;  // Simulation area height
+            
+            const startX = (deviceCenter.x / 100) * containerWidth;
+            const startY = (deviceCenter.y / 100) * containerHeight;
+            const length = (distance / 100) * Math.min(containerWidth, containerHeight);
+            
+            cable.style.left = `${deviceCenter.x}%`;
+            cable.style.top = `${deviceCenter.y}%`;
+            cable.style.width = `${distance * 6}px`; // Scale factor for proper length
+            cable.style.transform = `rotate(${angle}deg)`;
+            cable.style.transformOrigin = '0 50%';
+            
+            return cable;
+        }
+
+        function selectDevice(deviceElement, config, port) {
+            if (selectedDevice && selectedDevice.element !== deviceElement) {
+                // Determine which switch function to demonstrate
+                const senderKnown = macTable[selectedDevice.config.mac];
+                const receiverKnown = macTable[config.mac];
+                
+                if (!senderKnown && !receiverKnown) {
+                    // Learning + Flooding scenario
+                    sendDataWithFunction(selectedDevice, { element: deviceElement, config: config, port: port }, 'learning-flooding');
+                } else if (senderKnown && receiverKnown) {
+                    // Forwarding scenario
+                    sendDataWithFunction(selectedDevice, { element: deviceElement, config: config, port: port }, 'forwarding');
+                } else {
+                    // Learning scenario
+                    sendDataWithFunction(selectedDevice, { element: deviceElement, config: config, port: port }, 'learning');
+                }
+                clearSelection();
+            } else {
+                // Select this device
+                clearSelection();
+                selectedDevice = { element: deviceElement, config: config, port: port };
+                deviceElement.classList.add('selected');
+                updateStatus(`Selected ${config.label}. Now click another device to send data!`, 'info');
+            }
+        }
+
+        function clearSelection() {
+            if (selectedDevice) {
+                selectedDevice.element.classList.remove('selected');
+                selectedDevice = null;
+            }
+        }
+
+        function sendDataWithFunction(sender, receiver, functionType) {
+            switch (functionType) {
+                case 'learning':
+                    demonstrateLearning(sender, receiver);
+                    break;
+                case 'learning-flooding':
+                    demonstrateLearningAndFlooding(sender, receiver);
+                    break;
+                case 'flooding':
+                    demonstrateFlooding(sender, receiver);
+                    break;
+                case 'forwarding':
+                    demonstrateForwarding(sender, receiver);
+                    break;
+                case 'filtering':
+                    demonstrateFiltering(sender, receiver);
+                    break;
+            }
+        }
+
+        function demonstrateLearning(sender, receiver) {
+            // Add to MAC table (switch learning)
+            macTable[sender.config.mac] = { device: sender.config.label, port: sender.port };
+            
+            updateStatus(`📚 LEARNING: Switch learned ${sender.config.label} is on Port ${sender.port}`, 'info');
+            
+            // Simple animation for learning
+            const senderCable = cables[sender.port];
+            const senderPort = document.getElementById(`port${sender.port}`);
+            
+            senderCable.classList.add('active');
+            senderPort.classList.add('active');
+            
+            setTimeout(() => {
+                senderCable.classList.remove('active');
+                senderPort.classList.remove('active');
+                updateMACTable();
+            }, 1500);
+        }
+
+        function demonstrateLearningAndFlooding(sender, receiver) {
+            // Learning phase
+            macTable[sender.config.mac] = { device: sender.config.label, port: sender.port };
+            
+            updateStatus(`📚 LEARNING + 🌊 FLOODING: Learning sender location, then flooding to find receiver!`, 'warning');
+            
+            // Phase 1: Show all ports as "searching" (wrong/unknown)
+            cables.forEach((cable, index) => {
+                const port = document.getElementById(`port${index}`);
+                if (index === sender.port) {
+                    // Sender cable - normal active
+                    cable.classList.add('active');
+                    port.classList.add('active');
+                } else {
+                    // All other cables - flooding (searching)
+                    cable.classList.add('wrong');
+                    port.classList.add('wrong');
+                }
+            });
+            
+            setTimeout(() => {
+                // Phase 2: Receiver found - show correct path
+                updateStatus(`✅ FLOODING: Receiver found! Learning receiver location.`, 'success');
+                macTable[receiver.config.mac] = { device: receiver.config.label, port: receiver.port };
+                
+                // Remove wrong styling from all ports
+                cables.forEach((cable, index) => {
+                    const port = document.getElementById(`port${index}`);
+                    cable.classList.remove('wrong');
+                    port.classList.remove('wrong');
+                });
+                
+                // Show correct receiver path
+                const receiverCable = cables[receiver.port];
+                const receiverPort = document.getElementById(`port${receiver.port}`);
+                receiverCable.classList.add('correct');
+                receiverPort.classList.add('correct');
+                receiver.element.classList.add('receiving');
+                
+                setTimeout(() => {
+                    // Clean up
+                    cables.forEach(cable => {
+                        cable.classList.remove('active', 'correct');
+                    });
+                    for (let i = 0; i < 4; i++) {
+                        const port = document.getElementById(`port${i}`);
+                        port.classList.remove('active', 'correct');
+                    }
+                    receiver.element.classList.remove('receiving');
+                    updateMACTable();
+                    updateStatus(`✅ Both devices learned! Next communication will use forwarding.`, 'success');
+                }, 1500);
+            }, 2000);
+        }
+
+        function demonstrateFlooding(sender, receiver) {
+            updateStatus(`🌊 FLOODING: Destination unknown - sending to all ports except sender!`, 'warning');
+            
+            // Phase 1: Flood to all ports except sender (show as wrong/unknown)
+            cables.forEach((cable, index) => {
+                const port = document.getElementById(`port${index}`);
+                if (index !== sender.port) {
+                    cable.classList.add('wrong');
+                    port.classList.add('wrong');
+                }
+            });
+            
+            setTimeout(() => {
+                // Phase 2: Receiver responds - show correct path
+                updateStatus(`✅ FLOODING: Receiver found! Correct port identified.`, 'success');
+                
+                // Remove wrong styling from all
+                cables.forEach((cable, index) => {
+                    const port = document.getElementById(`port${index}`);
+                    cable.classList.remove('wrong');
+                    port.classList.remove('wrong');
+                });
+                
+                // Show correct path
+                const receiverCable = cables[receiver.port];
+                const receiverPort = document.getElementById(`port${receiver.port}`);
+                receiverCable.classList.add('correct');
+                receiverPort.classList.add('correct');
+                receiver.element.classList.add('receiving');
+                
+                setTimeout(() => {
+                    // Clean up
+                    receiverCable.classList.remove('correct');
+                    receiverPort.classList.remove('correct');
+                    receiver.element.classList.remove('receiving');
+                }, 1500);
+            }, 2000);
+        }
+
+        function demonstrateForwarding(sender, receiver) {
+            updateStatus(`📤 FORWARDING: Both devices known - direct communication path created!`, 'success');
+            
+            // Only sender and receiver cables light up
+            const senderCable = cables[sender.port];
+            const receiverCable = cables[receiver.port];
+            const senderPort = document.getElementById(`port${sender.port}`);
+            const receiverPort = document.getElementById(`port${receiver.port}`);
+            
+            senderCable.classList.add('active');
+            senderPort.classList.add('active');
+            
+            setTimeout(() => {
+                receiverCable.classList.add('active');
+                receiverPort.classList.add('active');
+                receiver.element.classList.add('receiving');
+                
+                setTimeout(() => {
+                    senderCable.classList.remove('active');
+                    receiverCable.classList.remove('active');
+                    senderPort.classList.remove('active');
+                    receiverPort.classList.remove('active');
+                    receiver.element.classList.remove('receiving');
+                }, 1500);
+            }, 300);
+        }
+
+        function demonstrateFiltering(sender, receiver) {
+            updateStatus(`🚫 FILTERING: Blocking unnecessary traffic - other ports filtered out!`, 'info');
+            
+            // Show active communication between sender and receiver
+            const senderCable = cables[sender.port];
+            const receiverCable = cables[receiver.port];
+            const senderPort = document.getElementById(`port${sender.port}`);
+            const receiverPort = document.getElementById(`port${receiver.port}`);
+            
+            // Active communication
+            senderCable.classList.add('active');
+            receiverCable.classList.add('active');
+            senderPort.classList.add('active');
+            receiverPort.classList.add('active');
+            
+            // Show filtering on other ports and devices
+            const blockedMessages = [];
+            cables.forEach((cable, index) => {
+                const port = document.getElementById(`port${index}`);
+                const device = devices[index];
+                
+                if (index !== sender.port && index !== receiver.port) {
+                    // Show filtering effect
+                    cable.classList.add('filtering');
+                    port.classList.add('filtering');
+                    device.element.classList.add('blocked');
+                    
+                    // Add blocking message
+                    const message = document.createElement('div');
+                    message.className = 'blocking-message';
+                    message.textContent = '🚫 BLOCKED';
+                    message.style.left = `${device.config.x + 5}%`;
+                    message.style.top = `${device.config.y - 5}%`;
+                    document.getElementById('simulationArea').appendChild(message);
+                    blockedMessages.push(message);
+                }
+            });
+            
+            receiver.element.classList.add('receiving');
+            
+            setTimeout(() => {
+                updateStatus(`✅ FILTERING: Traffic successfully filtered - only intended recipient received data!`, 'success');
+                
+                setTimeout(() => {
+                    // Clean up all animations and messages
+                    cables.forEach(cable => {
+                        cable.classList.remove('active', 'filtering');
+                    });
+                    for (let i = 0; i < 4; i++) {
+                        const port = document.getElementById(`port${i}`);
+                        port.classList.remove('active', 'filtering');
+                    }
+                    devices.forEach(device => {
+                        device.element.classList.remove('receiving', 'blocked');
+                    });
+                    
+                    // Remove blocking messages
+                    blockedMessages.forEach(message => {
+                        message.remove();
+                    });
+                }, 1500);
+            }, 2000);
+        }
+
+        function demonstrateFunction(functionType) {
+            resetSimulation();
+            
+            setTimeout(() => {
+                switch (functionType) {
+                    case 'learning':
+                        updateStatus('🎬 Demonstrating LEARNING: Watch the switch learn device locations...', 'info');
+                        setTimeout(() => {
+                            demonstrateLearning(devices[0], devices[1]);
+                        }, 1000);
+                        break;
+                        
+                    case 'flooding':
+                        updateStatus('🎬 Demonstrating FLOODING: First-time communication floods all ports...', 'warning');
+                        setTimeout(() => {
+                            demonstrateFlooding(devices[0], devices[2]);
+                        }, 1000);
+                        break;
+                        
+                    case 'forwarding':
+                        updateStatus('🎬 Demonstrating FORWARDING: Known devices get direct communication...', 'success');
+                        // Pre-populate MAC table for forwarding demo
+                        macTable[devices[0].config.mac] = { device: devices[0].config.label, port: devices[0].port };
+                        macTable[devices[2].config.mac] = { device: devices[2].config.label, port: devices[2].port };
+                        updateMACTable();
+                        setTimeout(() => {
+                            demonstrateForwarding(devices[0], devices[2]);
+                        }, 1000);
+                        break;
+                        
+                    case 'filtering':
+                        updateStatus('🎬 Demonstrating FILTERING: Traffic blocked on unused ports...', 'info');
+                        // Pre-populate MAC table for filtering demo
+                        macTable[devices[1].config.mac] = { device: devices[1].config.label, port: devices[1].port };
+                        macTable[devices[3].config.mac] = { device: devices[3].config.label, port: devices[3].port };
+                        updateMACTable();
+                        setTimeout(() => {
+                            demonstrateFiltering(devices[1], devices[3]);
+                        }, 1000);
+                        break;
+                }
+            }, 500);
+        }
+
+        function updateStatus(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+        }
+
+        function updateMACTable() {
+            const macEntriesElement = document.getElementById('macEntries');
+            macEntriesElement.innerHTML = '';
+            
+            Object.entries(macTable).forEach(([mac, info]) => {
+                const entry = document.createElement('div');
+                entry.className = 'mac-entry';
+                entry.innerHTML = `
+                    <span>${mac}</span>
+                    <span>Port ${info.port}</span>
+                    <span>${info.device}</span>
+                `;
+                macEntriesElement.appendChild(entry);
+            });
+        }
+
+        function showMACTable() {
+            const macTableElement = document.getElementById('macTable');
+            const isVisible = macTableElement.style.display !== 'none';
+            macTableElement.style.display = isVisible ? 'none' : 'block';
+            
+            const button = event.target;
+            button.textContent = isVisible ? '📋 View MAC Table' : '📋 Hide MAC Table';
+        }
+
+        function resetSimulation() {
+            clearSelection();
+            macTable = {};
+            updateMACTable();
+            updateStatus('Simulation reset. Click devices or use function buttons to explore switch operations!', 'info');
+            
+            // Remove all active states from cables
+            cables.forEach(cable => {
+                cable.classList.remove('active', 'flooding', 'filtering', 'wrong', 'correct');
+            });
+            
+            // Remove active states from devices
+            devices.forEach(device => {
+                device.element.classList.remove('receiving', 'selected', 'blocked');
+            });
+            
+            // Remove active states from switch ports
+            for (let i = 0; i < 4; i++) {
+                const port = document.getElementById(`port${i}`);
+                if (port) port.classList.remove('active', 'flooding', 'filtering', 'wrong', 'correct');
+            }
+            
+            // Remove any blocking messages
+            const blockingMessages = document.querySelectorAll('.blocking-message');
+            blockingMessages.forEach(message => message.remove());
+        }
+
+        function startDemo() {
+            resetSimulation();
+            updateStatus('🎬 Auto demo starting...', 'info');
+            
+            setTimeout(() => {
+                // Demo sequence: Computer -> Server -> Printer -> Laptop
+                const demoSequence = [
+                    { from: 0, to: 2 }, // Computer to Server
+                    { from: 2, to: 1 }, // Server to Printer
+                    { from: 1, to: 3 }, // Printer to Laptop
+                    { from: 3, to: 0 }  // Laptop to Computer
+                ];
+                
+                let currentStep = 0;
+                
+                function executeDemoStep() {
+                    if (currentStep < demoSequence.length) {
+                        const step = demoSequence[currentStep];
+                        const sender = devices[step.from];
+                        const receiver = devices[step.to];
+                        
+                        sendData(sender, receiver);
+                        currentStep++;
+                        
+                        setTimeout(executeDemoStep, 2000);
+                    } else {
+                        updateStatus('🎉 Demo completed! Switch has learned all device locations.', 'success');
+                    }
+                }
+                
+                executeDemoStep();
+            }, 1000);
+        }
+
+        // Initialize simulation on page load
+        document.addEventListener('DOMContentLoaded', initializeSimulation);
+    </script>
+</body>
+</html>
