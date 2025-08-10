@@ -81,23 +81,35 @@ The **MAC Address Table** is like the switch's address book:
 
 ### Interactive Mode
 • **Click on any device** (Computer, Printer, Server, or Laptop) - it turns orange when selected
+
 • **Click on another device** to send data between them
+
 • **Watch what happens** - see how the switch handles the communication
+
 • **Notice the learning** - the switch remembers device locations automatically
+
 • **Start over anytime** with the 🔄 Reset button
 
 ### Demo Mode  
 • **📚 Learning Demo**: See how the switch discovers device locations
+
 • **🌊 Flooding Demo**: Watch what happens when the switch doesn't know where to send data
+
 • **📤 Forwarding Demo**: See direct communication between devices the switch knows
+
 • **🚫 Filtering Demo**: Watch how unused devices get blocked from receiving data
+
 • **📋 View MAC Table**: See what the switch has learned about device locations
 
 ### Tips for Learning
 • **Start simple**: Try one communication first to see basic learning
+
 • **Try more**: Send more messages to see how forwarding works
+
 • **Use the demos**: The demo buttons teach specific concepts step by step
+
 • **Check the table**: Look at what the switch remembers by viewing the MAC table
+
 • **Experiment**: Reset and try different combinations to learn more
 
 ---
